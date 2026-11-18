@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel de respostas</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../engine/style.css?v=1">
+  <style>
+    body { font-family: "Inter", system-ui, sans-serif; }
+    main { padding: 28px 0 48px; }
+    .login { display: grid; gap: 12px; grid-template-columns: 1fr 220px auto; align-items: end; background: var(--surface);
+      border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+    .login label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+    .login .opts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 18px; font-size: 14px; color: var(--muted); }
+    .login .opts label { display: inline-flex; gap: 6px; align-items: center; font-weight: 400; margin: 0; }
+    .status { font-size: 14px; color: var(--muted); margin: 14px 0; min-height: 1.4em; }
+    .status.err { color: var(--bad); }
+    .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 8px 0 24px; }
+    .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+    .kpi b { display: block; font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .kpi span { font-size: 13px; color: var(--muted); }
+    .cards { display: grid; gap: 14px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+    .card-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+    .card h2 { font-size: 18px; margin: 0; word-break: break-word; }
+    .card h2 a { color: var(--text); text-decoration: none; }
+    .card h2 a:hover { text-decoration: underline; }
+    .fresh { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); }
+    .body { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; margin-top: 12px; }
+    .big { font-size: 46px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+    .big small { font-size: 15px; font-weight: 500; color: var(--muted); }
+    dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 16px; margin: 0; font-size: 14px; }
+    dt { color: var(--muted); font-size: 12px; }
+    dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .goal { margin-top: 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+    .goal .bar { flex: 1; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+    .goal .bar i { display: block; height: 100%; background: var(--accent); }
+    .goal input { width: 70px; padding: 4px 6px; font-size: 13px; }
+    .spark { display: flex; align-items: flex-end; gap: 3px; height: 44px; margin-top: 14px; }
+    .spark i { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; opacity: .85; }
+    .spark i.zero { background: var(--line); }
+    .spark-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 0 0 16px; }
+    .tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 14px; font: 600 15px "Inter", system-ui, sans-serif;
+      color: var(--muted); cursor: pointer; margin-bottom: -1px; }
+    .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab .count { display: inline-block; min-width: 22px; padding: 0 6px; margin-left: 6px; border-radius: 99px; background: var(--surface-2); font-size: 12px; }
+    .tab[aria-selected="true"] .count { background: var(--accent-soft); }
+    .head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pill { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+    .pill.open { background: var(--ok-soft); color: var(--ok); }
+    .pill.closed { background: var(--surface-2); color: var(--muted); }
+    .btn.sm { padding: 5px 12px; font-size: 13px; }
+    .card.closed { opacity: .85; }
+    .empty-state { text-align: center; color: var(--muted); padding: 32px; border: 1px dashed var(--line); border-radius: var(--radius); }
+    @media (max-width: 640px) {
+      .login { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: 1fr 1fr; }
+      .body { grid-template-columns: 1fr; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+<nav class="nav"><div class="wrap"><span class="brand">Painel de respostas</span><span class="steps" id="updated"></span></div></nav>
+<main class="wrap">
+  <form class="login" id="login">
+    <div><label for="url">URL do Apps Script (/exec)</label><input type="text" id="url" autocomplete="off"></div>
+    <div><label for="senha">Senha do painel</label><input type="password" id="senha" autocomplete="current-password"></div>
+    <button class="btn primary" type="submit">Atualizar</button>
+    <div class="opts">
+      <label><input type="checkbox" id="lembrar"> Lembrar senha neste computador</label>
+      <label><input type="checkbox" id="auto" checked> Atualizar a cada 60 s</label>
+      <a id="sheet-link" href="#" target="_blank" rel="noopener" hidden>Abrir planilha ↗</a>
+    </div>
+  </form>
+  <p class="status" id="status" aria-live="polite"></p>
+  <div class="kpis" id="kpis" hidden></div>
+  <div class="tabs" id="tabs" role="tablist" hidden>
+    <button class="tab" role="tab" data-tab="abertas">Abertas<span class="count" id="n-abertas">0</span></button>
+    <button class="tab" role="tab" data-tab="fechadas">Fechadas<span class="count" id="n-fechadas">0</span></button>
+  </div>
+  <div class="cards" id="cards" role="tabpanel"></div>
+</main>
+
+<script>
+(function () {
+  const URL_PADRAO = "https://script.google.com/macros/s/AKfycbw04jQ8MX5FfSpXgXE1Kz6WJqdHIVIzOT8C2_FihivV0UlsRBsUwIQQP-InJ383caQNiA/exec";
+  const K = "painel-admin";
+  const ls = {
+    get(k) { try { return JSON.parse(localStorage.getItem(K + "-" + k)); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(K + "-" + k, JSON.stringify(v)); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(K + "-" + k); } catch (e) {} }
+  };
+  const $ = id => document.getElementById(id);
+  const url = $("url"), senha = $("senha"), lembrar = $("lembrar"), auto = $("auto"), status = $("status");
+  url.value = ls.get("url") || URL_PADRAO;
+  const s = ls.get("senha");
+  if (s) { senha.value = s; lembrar.checked = true; }
+  if (ls.get("auto") === false) auto.checked = false;
+
+  const metas = ls.get("metas") || {};
+  let timer = null, last = null;
+  let aba = ls.get("aba") === "fechadas" ? "fechadas" : "abertas";
+  function marcarAba() {
+    document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.tab === aba ? "true" : "false"));
+  }
+  marcarAba();
+  $("tabs").addEventListener("click", ev => {
+    const t = ev.target.closest(".tab");
+    if (!t) return;
+    aba = t.dataset.tab;
+    ls.set("aba", aba);
+    marcarAba();
+    if (last) render(last);
+  });
+
+  const esc = t => String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function relativo(txt) {
+    if (!txt) return "—";
+    const d = new Date(txt.replace(" ", "T"));
+    if (isNaN(d)) return txt;
+    const min = Math.round((Date.now() - d) / 60000);
+    if (min < 1) return "agora";
+    if (min < 60) return "há " + min + " min";
+    const h = Math.round(min / 60);
+    if (h < 24) return "há " + h + " h";
+    const dias = Math.round(h / 24);
+    return dias === 1 ? "ontem" : "há " + dias + " dias";
+  }
+
+  function ultimosDias(porDia, hoje, n) {
+    const out = [], base = new Date(hoje + "T12:00:00");
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(base); d.setDate(d.getDate() - i);
+      const k = d.toISOString().slice(0, 10);
+      out.push({ dia: k, n: porDia[k] || 0 });
+    }
+    return out;
+  }
+
+  function render(data) {
+    last = data;
+    const todos = data.estudos.slice().sort((a, b) => (b.ultima || "").localeCompare(a.ultima || ""));
+    const abertas = todos.filter(e => e.aberta !== false), fechadas = todos.filter(e => e.aberta === false);
+    $("tabs").hidden = false;
+    $("n-abertas").textContent = abertas.length;
+    $("n-fechadas").textContent = fechadas.length;
+    const est = aba === "abertas" ? abertas : fechadas;
+    const tot = todos.reduce((s, e) => s + e.total, 0), hoje = todos.reduce((s, e) => s + e.hoje, 0);
+    $("kpis").hidden = false;
+    $("kpis").innerHTML =
+      '<div class="kpi"><b>' + abertas.length + '</b><span>pesquisas abertas</span></div>' +
+      '<div class="kpi"><b>' + tot + '</b><span>respostas no total</span></div>' +
+      '<div class="kpi"><b>' + hoje + '</b><span>respostas hoje</span></div>';
+    $("sheet-link").href = data.planilha;
+    $("sheet-link").hidden = false;
+    $("updated").textContent = "Atualizado às " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    if (!est.length) {
+      $("cards").innerHTML = '<div class="empty-state">' + (aba === "fechadas"
+        ? "Nenhuma pesquisa fechada."
+        : todos.length ? "Nenhuma pesquisa aberta." : "Nenhuma resposta ainda. A pesquisa aparece aqui quando chega a primeira resposta.") + "</div>";
+      return;
+    }
+    $("cards").innerHTML = est.map(e => {
+      const dias = ultimosDias(e.porDia || {}, data.hoje, 14);
+      const max = Math.max(1, ...dias.map(d => d.n));
+      const meta = metas[e.id];
+      const pct = meta ? Math.min(100, e.total / meta * 100) : 0;
+      const recente = e.ultima && (Date.now() - new Date(e.ultima.replace(" ", "T"))) < 3600e3;
+      const aberta = e.aberta !== false;
+      return '<article class="card' + (aberta ? "" : " closed") + '">' +
+        '<div class="card-head"><h2><a target="_blank" rel="noopener" href="' + esc(data.planilha.replace(/\/edit.*$/, "") + "/edit#gid=" + e.gid) + '">' + esc(e.id) + ' ↗</a></h2>' +
+        '<div class="head-right">' + (recente && aberta ? '<span class="fresh">resposta na última hora</span>' : "") +
+        '<span class="pill ' + (aberta ? "open" : "closed") + '">' + (aberta ? "Aberta" : "Fechada") + "</span>" +
+        '<button type="button" class="btn sm ' + (aberta ? "secondary" : "primary") + '" data-toggle="' + esc(e.id) + '" data-aberta="' + (aberta ? "1" : "0") + '">' +
+        (aberta ? "Fechar pesquisa" : "Reabrir pesquisa") + "</button></div></div>" +
+        '<div class="body"><div class="big">' + e.total + ' <small>' + (e.total === 1 ? "resposta" : "respostas") + "</small></div>" +
+        "<dl><div><dt>Hoje</dt><dd>" + e.hoje + "</dd></div>" +
+        "<div><dt>Última resposta</dt><dd title=\"" + esc(e.ultima) + "\">" + relativo(e.ultima) + "</dd></div>" +
+        (e.participantes != null ? "<div><dt>Códigos distintos</dt><dd>" + e.participantes + "</dd></div>" : "") +
+        "<div><dt>Duração mediana</dt><dd>" + (e.duracaoMediana != null ? e.duracaoMediana.toFixed(1).replace(".", ",") + " min" : "—") + "</dd></div></dl></div>" +
+        '<div class="spark" title="Respostas por dia (últimos 14 dias)">' +
+        dias.map(d => '<i class="' + (d.n ? "" : "zero") + '" style="height:' + (d.n ? Math.max(8, d.n / max * 100) : 4) + '%" title="' + d.dia.split("-").reverse().join("/") + ": " + d.n + '"></i>').join("") +
+        '</div><div class="spark-axis"><span>' + dias[0].dia.slice(8) + "/" + dias[0].dia.slice(5, 7) + "</span><span>últimos 14 dias</span><span>hoje</span></div>" +
+        '<div class="goal"><span>Meta</span><input type="number" min="1" data-meta="' + esc(e.id) + '" value="' + (meta || "") + '" placeholder="ex.: 30">' +
+        (meta ? '<span class="bar"><i style="width:' + pct + '%"></i></span><span>' + Math.round(pct) + "%</span>" : '<span>defina para ver o progresso</span>') +
+        "</div></article>";
+    }).join("");
+  }
+
+  $("cards").addEventListener("change", ev => {
+    const id = ev.target.dataset.meta;
+    if (!id) return;
+    const v = parseInt(ev.target.value, 10);
+    if (v > 0) metas[id] = v; else delete metas[id];
+    ls.set("metas", metas);
+    if (last) render(last);
+  });
+
+  $("cards").addEventListener("click", async ev => {
+    const b = ev.target.closest("[data-toggle]");
+    if (!b) return;
+    const id = b.dataset.toggle, abrir = b.dataset.aberta !== "1";
+    if (!abrir && !confirm("Fechar a pesquisa \"" + id + "\"?\n\nA página passa a mostrar \"pesquisa encerrada\" e novos envios são recusados. Você pode reabrir depois; nenhuma resposta é apagada.")) return;
+    b.disabled = true;
+    b.textContent = abrir ? "Reabrindo…" : "Fechando…";
+    try {
+      const res = await fetch(url.value.trim(), {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ acao: "status", senha: senha.value, estudo: id, aberta: abrir })
+      });
+      const out = await res.json();
+      if (!out.ok) throw new Error(out.erro || "Falha");
+      const e = last.estudos.find(x => x.id === id);
+      if (e) e.aberta = out.aberta;
+      status.className = "status";
+      status.textContent = "\"" + id + "\" agora está " + (out.aberta ? "aberta" : "fechada") + ".";
+      render(last);
+    } catch (err) {
+      status.className = "status err";
+      status.textContent = "Não foi possível mudar o status: " + err.message;
+      render(last);
+    }
+  });
+
+  async function carregar() {
+    if (!senha.value) { status.className = "status"; status.textContent = "Digite a senha do painel."; return; }
+    status.className = "status";
+    status.textContent = "Carregando…";
+    try {
+      const res = await fetch(url.value.trim(), {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ acao: "painel", senha: senha.value })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.erro || "Falha");
+      status.textContent = "";
+      ls.set("url", url.value.trim());
+      if (lembrar.checked) ls.set("senha", senha.value); else ls.del("senha");
+      render(data);
+    } catch (e) {
+      status.className = "status err";
+      status.textContent = /Failed to fetch|NetworkError|JSON/.test(e.message)
+        ? "Não foi possível falar com o Apps Script. Confira a URL e se a versão nova do Code.gs foi implantada."
+        : e.message;
+    }
+    agenda();
+  }
+
+  function agenda() {
+    clearTimeout(timer);
+    if (auto.checked) timer = setTimeout(carregar, 60000);
+  }
+
+  $("login").addEventListener("submit", e => { e.preventDefault(); carregar(); });
+  auto.addEventListener("change", () => { ls.set("auto", auto.checked); agenda(); });
+  lembrar.addEventListener("change", () => { if (!lembrar.checked) ls.del("senha"); });
+  if (senha.value) carregar();
+})();
+</script>
+</body>
+</html>
