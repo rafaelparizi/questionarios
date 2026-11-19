@@ -17,8 +17,9 @@ admin/index.html         painel: quantas respostas cada pesquisa recebeu
 
 1. Copie `estudos/exemplo` para `estudos/<nome-da-pesquisa>`.
 2. Edite `config.js`: `id` (nome da aba na planilha), textos do TCLE e perguntas.
-3. Cole em `envioUrl` a URL `/exec` do Apps Script (veja `apps-script/README.md`; a mesma URL serve para todas as pesquisas).
-4. Publique (ex.: GitHub Pages) e mande o link aos participantes:
+3. Acrescente a pesquisa em `estudos/lista.json` (`id` e `pasta`), para ela aparecer no painel desde o início.
+4. Cole em `envioUrl` a URL `/exec` do Apps Script (veja `apps-script/README.md`; a mesma URL serve para todas as pesquisas).
+5. Publique (ex.: GitHub Pages) e mande o link aos participantes:
    `https://<usuario>.github.io/<repo>/estudos/<nome-da-pesquisa>/`
    Para já preencher o código do participante: `.../?codigo=A01`.
 
@@ -37,7 +38,7 @@ Com o servidor local rodando, abra http://localhost:8765/admin/ e digite a senha
 (configuração da senha em `apps-script/README.md`). Mostra, para cada pesquisa (aba da planilha):
 total de respostas, respostas de hoje, última resposta, códigos distintos, duração mediana,
 gráfico dos últimos 14 dias e uma meta opcional (ex.: 30 alunos) com barra de progresso.
-Atualiza sozinho a cada 60 s. Uma pesquisa aparece no painel a partir da primeira resposta.
+Atualiza sozinho a cada 60 s. Toda pesquisa listada em `estudos/lista.json` aparece no painel, mesmo com 0 respostas.
 
 As pesquisas ficam em duas abas, **Abertas** e **Fechadas**. O botão **Fechar pesquisa** faz a
 página daquela pesquisa mostrar "Esta pesquisa está encerrada" e o Apps Script recusar novos envios;

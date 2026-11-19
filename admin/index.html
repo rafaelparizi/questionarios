@@ -29,6 +29,7 @@
     .card h2 { font-size: 18px; margin: 0; word-break: break-word; }
     .card h2 a { color: var(--text); text-decoration: none; }
     .card h2 a:hover { text-decoration: underline; }
+    .page-link { font-size: 13px; font-weight: 500; margin-left: 6px; }
     .fresh { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); }
     .body { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; margin-top: 12px; }
     .big { font-size: 46px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -175,7 +176,10 @@
       const recente = e.ultima && (Date.now() - new Date(e.ultima.replace(" ", "T"))) < 3600e3;
       const aberta = e.aberta !== false;
       return '<article class="card' + (aberta ? "" : " closed") + '">' +
-        '<div class="card-head"><h2><a target="_blank" rel="noopener" href="' + esc(data.planilha.replace(/\/edit.*$/, "") + "/edit#gid=" + e.gid) + '">' + esc(e.id) + ' ↗</a></h2>' +
+        '<div class="card-head"><h2>' + (e.gid != null
+          ? '<a target="_blank" rel="noopener" title="Abrir a aba na planilha" href="' + esc(data.planilha.replace(/\/edit.*$/, "") + "/edit#gid=" + e.gid) + '">' + esc(e.id) + " ↗</a>"
+          : esc(e.id)) +
+        (e.pasta ? ' <a class="page-link" target="_blank" rel="noopener" href="../estudos/' + encodeURIComponent(e.pasta) + '/">questionário ↗</a>' : "") + "</h2>" +
         '<div class="head-right">' + (recente && aberta ? '<span class="fresh">resposta na última hora</span>' : "") +
         '<span class="pill ' + (aberta ? "open" : "closed") + '">' + (aberta ? "Aberta" : "Fechada") + "</span>" +
         '<button type="button" class="btn sm ' + (aberta ? "secondary" : "primary") + '" data-toggle="' + esc(e.id) + '" data-aberta="' + (aberta ? "1" : "0") + '">' +
@@ -229,6 +233,25 @@
     }
   });
 
+  // Pesquisas publicadas (estudos/lista.json) que ainda não têm respostas não existem na planilha:
+  // entram no painel com 0 respostas e o status consultado no Apps Script.
+  async function juntarPublicadas(data) {
+    let lista = [];
+    try { lista = await (await fetch("../estudos/lista.json?nc=" + Date.now())).json(); } catch (e) { return; }
+    const porId = {};
+    data.estudos.forEach(e => porId[e.id] = e);
+    await Promise.all(lista.map(async p => {
+      if (porId[p.id]) { porId[p.id].pasta = p.pasta; return; }
+      let aberta = true;
+      try {
+        const st = await (await fetch(url.value.trim() + "?estudo=" + encodeURIComponent(p.id))).json();
+        if (st.ok && st.aberta === false) aberta = false;
+      } catch (e) {}
+      data.estudos.push({ id: p.id, pasta: p.pasta, gid: null, aberta, total: 0, hoje: 0, ultima: "",
+        participantes: null, duracaoMediana: null, porDia: {} });
+    }));
+  }
+
   async function carregar() {
     if (!senha.value) { status.className = "status"; status.textContent = "Digite a senha do painel."; return; }
     status.className = "status";
@@ -243,6 +266,7 @@
       status.textContent = "";
       ls.set("url", url.value.trim());
       if (lembrar.checked) ls.set("senha", senha.value); else ls.del("senha");
+      await juntarPublicadas(data);
       render(data);
     } catch (e) {
       status.className = "status err";
